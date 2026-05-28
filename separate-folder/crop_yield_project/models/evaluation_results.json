@@ -1,0 +1,19 @@
+{
+  "model": "ResidualANN",
+  "val_metrics": {
+    "split": "validation",
+    "r2": 0.4094,
+    "mae": 4537.7,
+    "rmse": 9979.3,
+    "mape": 49.060001373291016,
+    "bias": -4535.2998046875
+  },
+  "test_metrics": {
+    "split": "test",
+    "r2": 0.4011,
+    "mae": 4623.9,
+    "rmse": 10211.8,
+    "mape": 48.97999954223633,
+    "bias": -4622.89990234375
+  }
+}

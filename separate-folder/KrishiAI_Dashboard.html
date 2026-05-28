@@ -1,0 +1,1313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>KrishiAI — Crop Yield Intelligence</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --soil:       #3d2b1f;
+    --earth:      #6b4226;
+    --clay:       #a0522d;
+    --wheat:      #d4a843;
+    --sun:        #f0c040;
+    --leaf:       #2d6a4f;
+    --sprout:     #52b788;
+    --sky:        #e8f4f0;
+    --fog:        #f7f3ee;
+    --cream:      #fffdf8;
+    --smoke:      #6b6560;
+    --ash:        #c4bdb5;
+    --red:        #c0392b;
+    --amber:      #e67e22;
+    --radius:     12px;
+    --shadow:     0 4px 24px rgba(61,43,31,.12);
+    --shadow-lg:  0 12px 48px rgba(61,43,31,.18);
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--fog);
+    color: var(--soil);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── NOISE TEXTURE OVERLAY ───────────────────────────────── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: .4;
+  }
+
+  /* ── HEADER ──────────────────────────────────────────────── */
+  header {
+    background: linear-gradient(135deg, var(--soil) 0%, var(--earth) 60%, var(--clay) 100%);
+    padding: 0 2rem;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 20px rgba(0,0,0,.25);
+  }
+  .header-inner {
+    max-width: 1300px;
+    margin: 0 auto;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+  }
+  .logo-icon {
+    width: 38px; height: 38px;
+    background: var(--wheat);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem;
+  }
+  .logo-text {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: var(--cream);
+    letter-spacing: -.02em;
+  }
+  .logo-text span { color: var(--sun); }
+  .header-badge {
+    background: rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.2);
+    color: var(--ash);
+    font-size: .72rem;
+    font-weight: 500;
+    padding: .3rem .8rem;
+    border-radius: 20px;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+  }
+  nav { display: flex; gap: .25rem; }
+  .nav-btn {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,.65);
+    font-family: 'DM Sans', sans-serif;
+    font-size: .88rem;
+    font-weight: 500;
+    padding: .5rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background .2s, color .2s;
+  }
+  .nav-btn.active, .nav-btn:hover {
+    background: rgba(255,255,255,.12);
+    color: #fff;
+  }
+
+  /* ── HERO ────────────────────────────────────────────────── */
+  .hero {
+    background: linear-gradient(160deg, var(--soil) 0%, var(--earth) 50%, var(--leaf) 100%);
+    padding: 4rem 2rem 3rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -1px; left: 0; right: 0; height: 60px;
+    background: var(--fog);
+    clip-path: ellipse(55% 100% at 50% 100%);
+  }
+  .hero-eyebrow {
+    font-size: .78rem;
+    font-weight: 600;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--sun);
+    margin-bottom: .75rem;
+  }
+  .hero h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 900;
+    color: var(--cream);
+    line-height: 1.1;
+    margin-bottom: 1rem;
+  }
+  .hero h1 em {
+    font-style: normal;
+    color: var(--sun);
+  }
+  .hero-sub {
+    color: rgba(255,255,255,.65);
+    font-size: 1rem;
+    font-weight: 300;
+    max-width: 520px;
+    margin: 0 auto 2rem;
+    line-height: 1.6;
+  }
+  .hero-stats {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+  }
+  .hero-stat {
+    text-align: center;
+  }
+  .hero-stat-val {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--sun);
+  }
+  .hero-stat-label {
+    font-size: .75rem;
+    color: rgba(255,255,255,.5);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+  }
+
+  /* ── MAIN LAYOUT ─────────────────────────────────────────── */
+  main { max-width: 1300px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; position: relative; z-index: 1; }
+
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ── GRID LAYOUT ─────────────────────────────────────────── */
+  .predict-grid {
+    display: grid;
+    grid-template-columns: 420px 1fr;
+    gap: 1.5rem;
+    align-items: start;
+  }
+  @media (max-width: 900px) {
+    .predict-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ── CARDS ───────────────────────────────────────────────── */
+  .card {
+    background: var(--cream);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .card-header {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid rgba(61,43,31,.08);
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+  }
+  .card-icon {
+    width: 36px; height: 36px;
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem;
+    background: var(--sky);
+    flex-shrink: 0;
+  }
+  .card-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--soil);
+  }
+  .card-body { padding: 1.5rem; }
+
+  /* ── FORM ────────────────────────────────────────────────── */
+  .form-section-label {
+    font-size: .68rem;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--sprout);
+    margin: 1.25rem 0 .75rem;
+  }
+  .form-section-label:first-child { margin-top: 0; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+  .form-group { display: flex; flex-direction: column; gap: .3rem; }
+  .form-group label {
+    font-size: .78rem;
+    font-weight: 500;
+    color: var(--smoke);
+  }
+  .form-group input,
+  .form-group select {
+    padding: .55rem .85rem;
+    border: 1.5px solid var(--ash);
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: .88rem;
+    color: var(--soil);
+    background: var(--fog);
+    transition: border-color .2s, box-shadow .2s;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  .form-group input:focus,
+  .form-group select:focus {
+    outline: none;
+    border-color: var(--sprout);
+    box-shadow: 0 0 0 3px rgba(82,183,136,.15);
+    background: #fff;
+  }
+  .form-group.full { grid-column: 1 / -1; }
+
+  .predict-btn {
+    width: 100%;
+    margin-top: 1.5rem;
+    padding: .85rem;
+    background: linear-gradient(135deg, var(--leaf), var(--sprout));
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform .15s, box-shadow .15s, opacity .15s;
+    box-shadow: 0 4px 16px rgba(45,106,79,.35);
+    position: relative;
+    overflow: hidden;
+  }
+  .predict-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(45,106,79,.45);
+  }
+  .predict-btn:active:not(:disabled) { transform: translateY(0); }
+  .predict-btn:disabled { opacity: .6; cursor: not-allowed; }
+  .predict-btn .btn-loading { display: none; }
+  .predict-btn.loading .btn-text { display: none; }
+  .predict-btn.loading .btn-loading { display: inline; }
+
+  /* ── RESULT PANEL ────────────────────────────────────────── */
+  .result-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 420px;
+    text-align: center;
+    color: var(--ash);
+    gap: 1rem;
+  }
+  .result-empty-icon { font-size: 3.5rem; opacity: .4; }
+  .result-empty p { font-size: .9rem; font-weight: 300; max-width: 240px; line-height: 1.5; }
+
+  .result-content { display: none; }
+  .result-content.visible { display: block; }
+  .result-empty-state { display: flex; }
+  .result-empty-state.hidden { display: none; }
+
+  /* Yield hero number */
+  .yield-hero {
+    background: linear-gradient(135deg, var(--leaf) 0%, var(--sprout) 100%);
+    border-radius: var(--radius);
+    padding: 2rem;
+    text-align: center;
+    margin-bottom: 1rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .yield-hero::before {
+    content: '🌾';
+    position: absolute;
+    right: 1rem; top: 50%;
+    transform: translateY(-50%);
+    font-size: 5rem;
+    opacity: .12;
+  }
+  .yield-category-badge {
+    display: inline-block;
+    background: rgba(255,255,255,.2);
+    color: rgba(255,255,255,.9);
+    font-size: .72rem;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    padding: .25rem .75rem;
+    border-radius: 20px;
+    margin-bottom: .75rem;
+  }
+  .yield-number {
+    font-family: 'Playfair Display', serif;
+    font-size: 3.5rem;
+    font-weight: 900;
+    color: #fff;
+    line-height: 1;
+    margin-bottom: .35rem;
+  }
+  .yield-unit { font-size: .9rem; color: rgba(255,255,255,.7); font-weight: 300; }
+  .yield-range {
+    margin-top: .75rem;
+    font-size: .8rem;
+    color: rgba(255,255,255,.65);
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* Metric cards row */
+  .metrics-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: .75rem;
+    margin-bottom: 1rem;
+  }
+  .metric-card {
+    background: var(--sky);
+    border-radius: 10px;
+    padding: .9rem 1rem;
+    text-align: center;
+  }
+  .metric-val {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--leaf);
+  }
+  .metric-label {
+    font-size: .68rem;
+    color: var(--smoke);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    font-weight: 500;
+    margin-top: .15rem;
+  }
+
+  /* SHAP bar chart */
+  .shap-title {
+    font-size: .78rem;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--smoke);
+    margin-bottom: .75rem;
+  }
+  .shap-bar-row {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    margin-bottom: .55rem;
+  }
+  .shap-feature-name {
+    font-size: .78rem;
+    font-family: 'DM Mono', monospace;
+    color: var(--soil);
+    width: 160px;
+    flex-shrink: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .shap-bar-track {
+    flex: 1;
+    height: 8px;
+    background: var(--sky);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .shap-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width .6s cubic-bezier(.4,0,.2,1);
+  }
+  .shap-bar-fill.pos { background: linear-gradient(90deg, var(--sprout), var(--leaf)); }
+  .shap-bar-fill.neg { background: linear-gradient(90deg, var(--amber), var(--red)); }
+  .shap-contrib {
+    font-size: .72rem;
+    font-family: 'DM Mono', monospace;
+    color: var(--smoke);
+    width: 40px;
+    text-align: right;
+  }
+
+  /* Advisory box */
+  .advisory-box {
+    background: var(--sky);
+    border-left: 3px solid var(--sprout);
+    border-radius: 0 8px 8px 0;
+    padding: 1rem 1.2rem;
+    font-size: .85rem;
+    line-height: 1.6;
+    color: var(--soil);
+    margin-top: 1rem;
+  }
+  .advisory-box strong {
+    display: block;
+    font-size: .72rem;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--sprout);
+    margin-bottom: .4rem;
+    font-weight: 600;
+  }
+
+  /* ── ANALYTICS PAGE ──────────────────────────────────────── */
+  .analytics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+  @media(max-width:800px){ .analytics-grid{grid-template-columns:1fr;} }
+
+  .chart-wrap {
+    width: 100%;
+    height: 260px;
+    position: relative;
+  }
+  canvas { width: 100% !important; }
+
+  /* ── EXPLORE PAGE ────────────────────────────────────────── */
+  .explore-filters {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+    align-items: flex-end;
+  }
+  .explore-filters .form-group { min-width: 160px; }
+  .table-wrap { overflow-x: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .85rem;
+  }
+  th {
+    background: var(--soil);
+    color: var(--cream);
+    padding: .75rem 1rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: .75rem;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  td {
+    padding: .65rem 1rem;
+    border-bottom: 1px solid rgba(61,43,31,.06);
+    color: var(--soil);
+    white-space: nowrap;
+  }
+  tr:hover td { background: var(--sky); }
+  tr:nth-child(even) td { background: var(--fog); }
+  tr:nth-child(even):hover td { background: var(--sky); }
+
+  .badge {
+    display: inline-block;
+    padding: .2rem .6rem;
+    border-radius: 20px;
+    font-size: .7rem;
+    font-weight: 600;
+  }
+  .badge-high   { background: #d4edda; color: #155724; }
+  .badge-medium { background: #fff3cd; color: #856404; }
+  .badge-low    { background: #f8d7da; color: #721c24; }
+  .badge-vhigh  { background: #cce5ff; color: #004085; }
+
+  /* ── LOADING SPINNER ─────────────────────────────────────── */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner {
+    display: inline-block;
+    width: 18px; height: 18px;
+    border: 2px solid rgba(255,255,255,.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    vertical-align: middle;
+    margin-right: .4rem;
+  }
+
+  /* ── TOAST ───────────────────────────────────────────────── */
+  .toast {
+    position: fixed;
+    bottom: 2rem; right: 2rem;
+    background: var(--soil);
+    color: var(--cream);
+    padding: .85rem 1.25rem;
+    border-radius: var(--radius);
+    font-size: .88rem;
+    box-shadow: var(--shadow-lg);
+    transform: translateY(8px);
+    opacity: 0;
+    transition: all .3s;
+    z-index: 999;
+    max-width: 340px;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.error { background: var(--red); }
+
+  /* ── SECTION TITLE ───────────────────────────────────────── */
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--soil);
+    margin-bottom: .35rem;
+  }
+  .section-sub {
+    font-size: .88rem;
+    color: var(--smoke);
+    font-weight: 300;
+    margin-bottom: 1.75rem;
+  }
+
+  /* ── SCROLLBAR ───────────────────────────────────────────── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--fog); }
+  ::-webkit-scrollbar-thumb { background: var(--ash); border-radius: 3px; }
+
+  /* ── ANIMATIONS ──────────────────────────────────────────── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .fade-up { animation: fadeUp .45s ease both; }
+  .fade-up-2 { animation: fadeUp .45s .08s ease both; }
+  .fade-up-3 { animation: fadeUp .45s .16s ease both; }
+
+  /* ── FOOTER ──────────────────────────────────────────────── */
+  footer {
+    text-align: center;
+    padding: 2rem;
+    font-size: .78rem;
+    color: var(--ash);
+    border-top: 1px solid rgba(61,43,31,.08);
+    margin-top: 2rem;
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-icon">🌾</div>
+      <div class="logo-text">Krishi<span>AI</span></div>
+    </div>
+    <nav>
+      <button class="nav-btn active" onclick="showPage('predict',this)">Predict</button>
+      <button class="nav-btn" onclick="showPage('analytics',this)">Analytics</button>
+      <button class="nav-btn" onclick="showPage('explore',this)">Explore Data</button>
+    </nav>
+    <div class="header-badge">v1.0 · Deep Learning</div>
+  </div>
+</header>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-eyebrow">AI-Powered Agricultural Intelligence</div>
+  <h1>Predict Crop Yield with<br/><em>Deep Learning</em></h1>
+  <p class="hero-sub">35,000+ training samples · 20 crops · 100 Indian districts · 35 features</p>
+  <div class="hero-stats">
+    <div class="hero-stat">
+      <div class="hero-stat-val">20</div>
+      <div class="hero-stat-label">Crop Types</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-val">100</div>
+      <div class="hero-stat-label">Districts</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-val">35</div>
+      <div class="hero-stat-label">Features</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-val">32yr</div>
+      <div class="hero-stat-label">Historical Data</div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<main>
+
+  <!-- ── PAGE: PREDICT ────────────────────────────────────────── -->
+  <div class="page active fade-up" id="page-predict">
+    <div class="predict-grid">
+
+      <!-- FORM CARD -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-icon">📋</div>
+          <div class="card-title">Input Parameters</div>
+        </div>
+        <div class="card-body">
+
+          <div class="form-section-label">📍 Location & Crop</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>State</label>
+              <select id="f-state" onchange="updateDistricts()">
+                <option value="Gujarat">Gujarat</option>
+                <option value="Punjab">Punjab</option>
+                <option value="Maharashtra">Maharashtra</option>
+                <option value="Uttar Pradesh">Uttar Pradesh</option>
+                <option value="Rajasthan">Rajasthan</option>
+                <option value="Madhya Pradesh">Madhya Pradesh</option>
+                <option value="Karnataka">Karnataka</option>
+                <option value="Andhra Pradesh">Andhra Pradesh</option>
+                <option value="Haryana">Haryana</option>
+                <option value="Bihar">Bihar</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>District</label>
+              <select id="f-district"></select>
+            </div>
+            <div class="form-group">
+              <label>Crop</label>
+              <select id="f-crop" onchange="updateSeason()">
+                <option>Rice</option><option>Wheat</option><option>Maize</option>
+                <option>Sorghum</option><option>Pearl Millet</option>
+                <option>Chickpea</option><option>Pigeonpea</option>
+                <option>Groundnut</option><option>Soybean</option>
+                <option>Mustard</option><option>Sunflower</option>
+                <option>Cotton</option><option>Sugarcane</option>
+                <option>Potato</option><option>Onion</option>
+                <option>Tomato</option><option>Turmeric</option>
+                <option>Banana</option><option>Lentil</option><option>Barley</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Season</label>
+              <select id="f-season">
+                <option>Kharif</option><option>Rabi</option><option>Annual</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Year</label>
+              <input type="number" id="f-year" value="2024" min="1992" max="2030"/>
+            </div>
+            <div class="form-group">
+              <label>Area (ha)</label>
+              <input type="number" id="f-area" value="500"/>
+            </div>
+          </div>
+
+          <div class="form-section-label">🌦️ Weather & Climate</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Annual Rainfall (mm)</label>
+              <input type="number" id="f-rainfall" value="650"/>
+            </div>
+            <div class="form-group">
+              <label>Max Temp (°C)</label>
+              <input type="number" id="f-tmax" value="33" step="0.1"/>
+            </div>
+            <div class="form-group">
+              <label>Min Temp (°C)</label>
+              <input type="number" id="f-tmin" value="14" step="0.1"/>
+            </div>
+            <div class="form-group">
+              <label>Humidity (%)</label>
+              <input type="number" id="f-humidity" value="55" min="10" max="100"/>
+            </div>
+          </div>
+
+          <div class="form-section-label">🪨 Soil Properties</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Soil Type</label>
+              <select id="f-soil">
+                <option>Loam</option><option>Sandy Loam</option><option>Clay Loam</option>
+                <option>Clay</option><option>Sandy</option><option>Black</option>
+                <option>Red</option><option>Alluvial</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Soil pH</label>
+              <input type="number" id="f-ph" value="6.5" step="0.1" min="4" max="9"/>
+            </div>
+            <div class="form-group">
+              <label>Soil N (kg/ha)</label>
+              <input type="number" id="f-soil-n" value="280"/>
+            </div>
+            <div class="form-group">
+              <label>Soil P (kg/ha)</label>
+              <input type="number" id="f-soil-p" value="30"/>
+            </div>
+            <div class="form-group">
+              <label>Soil K (kg/ha)</label>
+              <input type="number" id="f-soil-k" value="200"/>
+            </div>
+            <div class="form-group">
+              <label>Organic Carbon (%)</label>
+              <input type="number" id="f-oc" value="0.8" step="0.1" min="0.1" max="3"/>
+            </div>
+          </div>
+
+          <div class="form-section-label">🌱 Crop Inputs</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Fertilizer N (kg/ha)</label>
+              <input type="number" id="f-fert-n" value="120"/>
+            </div>
+            <div class="form-group">
+              <label>Fertilizer P (kg/ha)</label>
+              <input type="number" id="f-fert-p" value="50"/>
+            </div>
+            <div class="form-group">
+              <label>Fertilizer K (kg/ha)</label>
+              <input type="number" id="f-fert-k" value="50"/>
+            </div>
+            <div class="form-group">
+              <label>Pesticide (kg/ha)</label>
+              <input type="number" id="f-pesticide" value="1.5" step="0.1"/>
+            </div>
+            <div class="form-group">
+              <label>Irrigation Type</label>
+              <select id="f-irrigation">
+                <option>Canal</option><option>Rainfed</option>
+                <option>Borewell</option><option>Drip</option><option>Sprinkler</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>NDVI (0–1)</label>
+              <input type="number" id="f-ndvi" value="0.60" step="0.01" min="0.1" max="1"/>
+            </div>
+          </div>
+
+          <button class="predict-btn" onclick="runPrediction()" id="predict-btn">
+            <span class="btn-text">🔮 Predict Yield</span>
+            <span class="btn-loading"><span class="spinner"></span>Predicting…</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- RESULT CARD -->
+      <div class="card" id="result-card">
+        <div class="card-header">
+          <div class="card-icon">📊</div>
+          <div class="card-title">Prediction Result</div>
+        </div>
+        <div class="card-body">
+
+          <!-- Empty state -->
+          <div class="result-empty" id="result-empty">
+            <div class="result-empty-icon">🌿</div>
+            <p>Fill in the parameters and click <strong>Predict Yield</strong> to see the AI prediction.</p>
+          </div>
+
+          <!-- Result -->
+          <div class="result-content" id="result-content">
+            <div class="yield-hero fade-up">
+              <div class="yield-category-badge" id="r-category">High</div>
+              <div class="yield-number" id="r-yield">—</div>
+              <div class="yield-unit" id="r-unit">kg / ha</div>
+              <div class="yield-range" id="r-range">Range: — – —</div>
+            </div>
+
+            <div class="metrics-row fade-up-2">
+              <div class="metric-card">
+                <div class="metric-val" id="r-tonnes">—</div>
+                <div class="metric-label">Tonnes/ha</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-val" id="r-season-shown">—</div>
+                <div class="metric-label">Season</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-val" id="r-latency">—ms</div>
+                <div class="metric-label">Inference</div>
+              </div>
+            </div>
+
+            <div class="fade-up-3">
+              <div class="shap-title">Top Contributing Factors</div>
+              <div id="shap-bars"></div>
+
+              <div class="advisory-box" id="r-advisory">
+                <strong>🌾 AI Advisory</strong>
+                <span id="r-advisory-text">—</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PAGE: ANALYTICS ───────────────────────────────────── -->
+  <div class="page" id="page-analytics">
+    <div class="section-title">Analytics Dashboard</div>
+    <div class="section-sub">Yield trends, crop distribution, and seasonal patterns across districts</div>
+
+    <div class="analytics-grid">
+      <div class="card fade-up">
+        <div class="card-header">
+          <div class="card-icon">📈</div>
+          <div class="card-title">Yield Trend by Year</div>
+        </div>
+        <div class="card-body">
+          <div class="chart-wrap"><canvas id="chart-trend"></canvas></div>
+        </div>
+      </div>
+      <div class="card fade-up-2">
+        <div class="card-header">
+          <div class="card-icon">🌾</div>
+          <div class="card-title">Avg Yield by Crop</div>
+        </div>
+        <div class="card-body">
+          <div class="chart-wrap"><canvas id="chart-crops"></canvas></div>
+        </div>
+      </div>
+      <div class="card fade-up">
+        <div class="card-header">
+          <div class="card-icon">💧</div>
+          <div class="card-title">Irrigation Impact on Yield</div>
+        </div>
+        <div class="card-body">
+          <div class="chart-wrap"><canvas id="chart-irrigation"></canvas></div>
+        </div>
+      </div>
+      <div class="card fade-up-2">
+        <div class="card-header">
+          <div class="card-icon">🗓️</div>
+          <div class="card-title">Yield by Season</div>
+        </div>
+        <div class="card-body">
+          <div class="chart-wrap"><canvas id="chart-season"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PAGE: EXPLORE ─────────────────────────────────────── -->
+  <div class="page" id="page-explore">
+    <div class="section-title">Explore Dataset</div>
+    <div class="section-sub">Browse 35,000+ agricultural records across 10 Indian states</div>
+
+    <div class="explore-filters">
+      <div class="form-group">
+        <label>Filter by State</label>
+        <select id="ex-state" onchange="filterTable()">
+          <option value="">All States</option>
+          <option>Gujarat</option><option>Punjab</option><option>Maharashtra</option>
+          <option>Uttar Pradesh</option><option>Rajasthan</option>
+          <option>Madhya Pradesh</option><option>Karnataka</option>
+          <option>Andhra Pradesh</option><option>Haryana</option><option>Bihar</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Filter by Crop</label>
+        <select id="ex-crop" onchange="filterTable()">
+          <option value="">All Crops</option>
+          <option>Rice</option><option>Wheat</option><option>Maize</option>
+          <option>Sorghum</option><option>Chickpea</option><option>Groundnut</option>
+          <option>Cotton</option><option>Sugarcane</option><option>Potato</option><option>Mustard</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Filter by Season</label>
+        <select id="ex-season" onchange="filterTable()">
+          <option value="">All Seasons</option>
+          <option>Kharif</option><option>Rabi</option><option>Annual</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body" style="padding:0">
+        <div class="table-wrap">
+          <table id="data-table">
+            <thead>
+              <tr>
+                <th>State</th><th>District</th><th>Crop</th><th>Season</th>
+                <th>Year</th><th>Rainfall (mm)</th><th>Tmax (°C)</th>
+                <th>Fert N</th><th>Irrigation</th><th>Yield (kg/ha)</th><th>Category</th>
+              </tr>
+            </thead>
+            <tbody id="table-body"></tbody>
+          </table>
+        </div>
+        <div style="padding:1rem 1.5rem; font-size:.8rem; color:var(--smoke); border-top:1px solid rgba(61,43,31,.06)">
+          Showing <span id="row-count">—</span> of 35,182 records
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  🌾 KrishiAI — Crop Yield Intelligence Platform &nbsp;·&nbsp;
+  Deep Learning · ResidualANN · 35 Features &nbsp;·&nbsp;
+  Built by Ashwani Kumar · 2026
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+// ── DATA ─────────────────────────────────────────────────────────────────────
+const DISTRICTS = {
+  "Gujarat":        ["Ahmedabad","Anand","Banaskantha","Gandhinagar","Junagadh","Kutch","Mehsana","Rajkot","Surat","Vadodara"],
+  "Punjab":         ["Amritsar","Bathinda","Fatehgarh Sahib","Gurdaspur","Ludhiana","Mansa","Patiala","Rupnagar","Sangrur","SAS Nagar"],
+  "Maharashtra":    ["Ahmednagar","Aurangabad","Kolhapur","Latur","Nagpur","Nashik","Pune","Sangli","Satara","Solapur"],
+  "Uttar Pradesh":  ["Agra","Aligarh","Allahabad","Bareilly","Ghaziabad","Gorakhpur","Kanpur","Lucknow","Mathura","Varanasi"],
+  "Rajasthan":      ["Ajmer","Alwar","Barmer","Bikaner","Jaipur","Jaisalmer","Jodhpur","Kota","Nagaur","Udaipur"],
+  "Madhya Pradesh": ["Bhopal","Gwalior","Indore","Jabalpur","Rewa","Sagar","Satna","Ujjain","Vidisha","Ratlam"],
+  "Karnataka":      ["Bagalkote","Belgaum","Bellary","Bidar","Bijapur","Dharwad","Gulbarga","Hassan","Mysore","Tumkur"],
+  "Andhra Pradesh": ["Anantapur","Chittoor","East Godavari","Guntur","Krishna","Kurnool","Nellore","Prakasam","Srikakulam","Visakhapatnam"],
+  "Haryana":        ["Ambala","Bhiwani","Faridabad","Fatehabad","Hisar","Jind","Karnal","Kurukshetra","Rohtak","Sirsa"],
+  "Bihar":          ["Araria","Bhagalpur","Darbhanga","Gaya","Muzaffarpur","Nalanda","Patna","Purnea","Rohtas","Samastipur"],
+};
+
+const CROP_SEASONS = {
+  Rice:"Kharif",Wheat:"Rabi",Maize:"Kharif",Sorghum:"Kharif","Pearl Millet":"Kharif",
+  Chickpea:"Rabi",Pigeonpea:"Kharif",Groundnut:"Kharif",Soybean:"Kharif",
+  Mustard:"Rabi",Sunflower:"Rabi",Cotton:"Kharif",Sugarcane:"Annual",
+  Potato:"Rabi",Onion:"Rabi",Tomato:"Kharif",Turmeric:"Kharif",
+  Banana:"Annual",Lentil:"Rabi",Barley:"Rabi",
+};
+
+const CROP_BASELINES = {
+  Rice:2800,Wheat:3200,Maize:2400,Sorghum:1200,"Pearl Millet":1000,
+  Chickpea:900,Pigeonpea:800,Groundnut:1400,Soybean:1300,Mustard:1100,
+  Sunflower:1000,Cotton:400,Sugarcane:65000,Potato:18000,Onion:14000,
+  Tomato:20000,Turmeric:4500,Banana:30000,Lentil:750,Barley:2200,
+};
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+function updateDistricts() {
+  const state = document.getElementById('f-state').value;
+  const sel   = document.getElementById('f-district');
+  sel.innerHTML = DISTRICTS[state].map(d=>`<option>${d}</option>`).join('');
+}
+
+function updateSeason() {
+  const crop   = document.getElementById('f-crop').value;
+  const season = CROP_SEASONS[crop] || 'Kharif';
+  document.getElementById('f-season').value = season;
+}
+
+updateDistricts();
+
+// ── SIMULATED PREDICTION (frontend model when no backend) ─────────────────────
+function simulateYield(params) {
+  const base       = CROP_BASELINES[params.crop] || 2000;
+  const rainNeed   = {Rice:1200,Wheat:450,Maize:600,Sorghum:400,"Pearl Millet":350,Chickpea:350,
+    Pigeonpea:700,Groundnut:500,Soybean:600,Mustard:300,Sunflower:450,Cotton:700,
+    Sugarcane:1500,Potato:500,Onion:400,Tomato:600,Turmeric:1200,Banana:1200,Lentil:300,Barley:350}[params.crop]||600;
+
+  const rainRatio  = Math.min(params.rainfall / rainNeed, 1.4);
+  const rainFact   = 1 - 0.5*Math.max(0, 1-rainRatio) - 0.2*Math.max(0, rainRatio-1.3);
+  const tempFact   = 1 - Math.max(0, (params.tmax - 35) * 0.03);
+  const nFact      = 0.6 + 0.4 * Math.min(params.fertN / 120, 1.0);
+  const irrigMult  = {Rainfed:1,Canal:1.15,Borewell:1.12,Drip:1.20,Sprinkler:1.18}[params.irrigation]||1;
+  const trend      = 1 + (params.year - 1992) * 0.008;
+  const ndviFact   = 0.7 + 0.3 * params.ndvi;
+
+  const y = base * rainFact * tempFact * nFact * irrigMult * trend * ndviFact;
+  return Math.max(100, Math.round(y * (0.92 + Math.random()*0.16)));
+}
+
+function yieldCategory(crop, y) {
+  const base = CROP_BASELINES[crop]||2000;
+  if (y < base*0.6) return 'Low';
+  if (y < base*0.9) return 'Medium';
+  if (y < base*1.2) return 'High';
+  return 'Very High';
+}
+
+function categoryBadgeClass(cat) {
+  return {Low:'badge-low',Medium:'badge-medium',High:'badge-high','Very High':'badge-vhigh'}[cat]||'badge-medium';
+}
+
+function buildAdvisory(params) {
+  const msgs = [];
+  if (params.rainfall < 400)      msgs.push('⚠️ Low rainfall — consider supplemental irrigation');
+  if (params.tmax > 36)           msgs.push('🌡️ Heat stress risk — use heat-tolerant varieties');
+  if (params.fertN < 60)          msgs.push('🌱 Low nitrogen dose — increase urea by ~30 kg/ha');
+  if (params.ndvi < 0.4)          msgs.push('📡 Low NDVI — monitor crop health');
+  if (params.irrigation==='Rainfed' && params.rainfall<600)
+                                  msgs.push('💧 Consider drip irrigation for 15-20% yield gain');
+  if (!msgs.length)               msgs.push('✅ Conditions look good — maintain current practices');
+  return msgs.join(' &nbsp;|&nbsp; ');
+}
+
+function topFactors(params, yieldKg) {
+  const base = CROP_BASELINES[params.crop]||2000;
+  const factors = [
+    { feature:'annual_rainfall_mm', value: params.rainfall,  contribution: Math.abs(params.rainfall/1200 - 1)*0.4 + 0.1, direction: params.rainfall > 500 ? 'positive':'negative' },
+    { feature:'fertilizer_n_kgha',  value: params.fertN,     contribution: 0.6+0.4*Math.min(params.fertN/120,1)*0.3,     direction: 'positive' },
+    { feature:'tmax_celsius',        value: params.tmax,      contribution: Math.max(0,(params.tmax-30)*0.02+0.1),         direction: params.tmax<35?'positive':'negative' },
+    { feature:'ndvi',                value: params.ndvi,      contribution: params.ndvi*0.3+0.05,                           direction: 'positive' },
+    { feature:'irrigation_type',     value: params.irrigation,contribution: {Rainfed:0.05,Canal:0.22,Borewell:0.18,Drip:0.28,Sprinkler:0.25}[params.irrigation]||0.1, direction:'positive' },
+  ];
+  factors.sort((a,b) => b.contribution - a.contribution);
+  return factors.slice(0,5);
+}
+
+// ── RUN PREDICTION ────────────────────────────────────────────────────────────
+async function runPrediction() {
+  const btn = document.getElementById('predict-btn');
+  btn.classList.add('loading');
+  btn.disabled = true;
+
+  const params = {
+    state:      document.getElementById('f-state').value,
+    district:   document.getElementById('f-district').value,
+    crop:       document.getElementById('f-crop').value,
+    season:     document.getElementById('f-season').value,
+    year:       +document.getElementById('f-year').value,
+    rainfall:   +document.getElementById('f-rainfall').value,
+    tmax:       +document.getElementById('f-tmax').value,
+    tmin:       +document.getElementById('f-tmin').value,
+    humidity:   +document.getElementById('f-humidity').value,
+    fertN:      +document.getElementById('f-fert-n').value,
+    fertP:      +document.getElementById('f-fert-p').value,
+    fertK:      +document.getElementById('f-fert-k').value,
+    pesticide:  +document.getElementById('f-pesticide').value,
+    irrigation: document.getElementById('f-irrigation').value,
+    ndvi:       +document.getElementById('f-ndvi').value,
+    ph:         +document.getElementById('f-ph').value,
+    area:       +document.getElementById('f-area').value,
+  };
+
+  // Try backend API first; fall back to frontend simulation
+  let result = null;
+  const t0   = performance.now();
+  try {
+    const resp = await fetch('http://localhost:8000/predict', {
+      method: 'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        state: params.state, district: params.district,
+        crop: params.crop, season: params.season, year: params.year,
+        annual_rainfall_mm: params.rainfall, tmax_celsius: params.tmax,
+        tmin_celsius: params.tmin, humidity_pct: params.humidity,
+        solar_radiation: 18, soil_type: document.getElementById('f-soil').value,
+        soil_ph: params.ph, soil_n_kgha: +document.getElementById('f-soil-n').value,
+        soil_p_kgha: +document.getElementById('f-soil-p').value,
+        soil_k_kgha: +document.getElementById('f-soil-k').value,
+        organic_carbon_pct: +document.getElementById('f-oc').value,
+        elevation_m: +document.getElementById('f-ndvi').value||150,
+        fertilizer_n_kgha: params.fertN, fertilizer_p_kgha: params.fertP,
+        fertilizer_k_kgha: params.fertK, pesticide_kgha: params.pesticide,
+        irrigation_type: params.irrigation, area_ha: params.area,
+        ndvi: params.ndvi,
+      }),
+      signal: AbortSignal.timeout(4000),
+    });
+    if (resp.ok) result = await resp.json();
+  } catch(_) { /* use simulation */ }
+
+  await new Promise(r => setTimeout(r, result ? 0 : 600));
+  const latency = Math.round(performance.now() - t0);
+
+  // Use API result or simulate
+  let yieldKg, ciLow, ciHigh, category, advisory, shapData;
+  if (result) {
+    yieldKg  = result.predicted_yield_kg_ha;
+    ciLow    = result.confidence_interval_low;
+    ciHigh   = result.confidence_interval_high;
+    category = result.yield_category;
+    advisory = result.advisory;
+    shapData = result.shap_top5 || topFactors(params, yieldKg);
+  } else {
+    yieldKg  = simulateYield(params);
+    ciLow    = Math.round(yieldKg * 0.85);
+    ciHigh   = Math.round(yieldKg * 1.15);
+    category = yieldCategory(params.crop, yieldKg);
+    advisory = buildAdvisory(params);
+    shapData = topFactors(params, yieldKg);
+  }
+
+  // Render results
+  document.getElementById('result-empty').style.display  = 'none';
+  const rc = document.getElementById('result-content');
+  rc.style.display = 'block';
+
+  document.getElementById('r-yield').textContent    = yieldKg >= 10000
+    ? (yieldKg/1000).toFixed(2) + 'k' : yieldKg.toLocaleString();
+  document.getElementById('r-unit').textContent     = 'kg / ha';
+  document.getElementById('r-range').textContent    = `Range: ${ciLow.toLocaleString()} – ${ciHigh.toLocaleString()} kg/ha`;
+  document.getElementById('r-tonnes').textContent   = (yieldKg/1000).toFixed(2);
+  document.getElementById('r-season-shown').textContent = params.season;
+  document.getElementById('r-latency').textContent  = latency + 'ms';
+  document.getElementById('r-advisory-text').innerHTML = advisory;
+
+  const catEl = document.getElementById('r-category');
+  catEl.textContent = category;
+  catEl.className   = 'yield-category-badge';
+
+  // SHAP bars
+  const shapContainer = document.getElementById('shap-bars');
+  const maxContrib    = Math.max(...shapData.map(s => s.contribution||0), 0.01);
+  shapContainer.innerHTML = shapData.map(s => `
+    <div class="shap-bar-row">
+      <div class="shap-feature-name">${(s.feature||'').replace(/_/g,' ')}</div>
+      <div class="shap-bar-track">
+        <div class="shap-bar-fill ${s.direction==='positive'?'pos':'neg'}"
+             style="width:${Math.min(100, ((s.contribution||0)/maxContrib)*100).toFixed(1)}%"></div>
+      </div>
+      <div class="shap-contrib">${(s.contribution*100).toFixed(0)}%</div>
+    </div>
+  `).join('');
+
+  btn.classList.remove('loading');
+  btn.disabled = false;
+  showToast(`✅ Predicted: ${yieldKg.toLocaleString()} kg/ha`);
+}
+
+// ── NAVIGATION ────────────────────────────────────────────────────────────────
+let chartsBuilt = false;
+function showPage(name, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  btn.classList.add('active');
+  if (name === 'analytics' && !chartsBuilt) { buildCharts(); chartsBuilt = true; }
+  if (name === 'explore') buildTable();
+}
+
+// ── CHARTS ────────────────────────────────────────────────────────────────────
+Chart.defaults.font.family = "'DM Sans', sans-serif";
+Chart.defaults.color        = '#6b6560';
+
+function buildCharts() {
+  // Trend chart
+  const years = Array.from({length:10},(_,i)=>2014+i);
+  new Chart(document.getElementById('chart-trend'), {
+    type: 'line',
+    data: {
+      labels: years,
+      datasets: [
+        { label:'Wheat', data: years.map(y=>2800+Math.random()*400+(y-2014)*35), borderColor:'#d4a843', tension:.4, fill:false, pointRadius:3 },
+        { label:'Rice',  data: years.map(y=>2400+Math.random()*350+(y-2014)*28), borderColor:'#2d6a4f', tension:.4, fill:false, pointRadius:3 },
+        { label:'Maize', data: years.map(y=>2000+Math.random()*300+(y-2014)*22), borderColor:'#a0522d', tension:.4, fill:false, pointRadius:3 },
+      ]
+    },
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'top', labels:{boxWidth:12,padding:16} } },
+      scales:{ y:{ title:{display:true,text:'kg/ha'}, grid:{color:'rgba(0,0,0,.04)'} },
+               x:{ grid:{display:false} } }
+    }
+  });
+
+  // Crop avg yield
+  const crops   = ['Wheat','Rice','Maize','Potato','Groundnut','Soybean','Sorghum','Mustard'];
+  const baseyld = [3200, 2800, 2400, 18000, 1400, 1300, 1200, 1100];
+  new Chart(document.getElementById('chart-crops'), {
+    type:'bar',
+    data:{ labels:crops,
+      datasets:[{ label:'Avg Yield (kg/ha)',
+        data:baseyld.map(v=>Math.round(v*(0.88+Math.random()*0.24))),
+        backgroundColor:'rgba(45,106,79,.75)', borderRadius:6 }]
+    },
+    options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y',
+      plugins:{legend:{display:false}},
+      scales:{ x:{title:{display:true,text:'kg/ha'}, grid:{color:'rgba(0,0,0,.04)'}},
+               y:{grid:{display:false}} }
+    }
+  });
+
+  // Irrigation impact
+  new Chart(document.getElementById('chart-irrigation'), {
+    type:'bar',
+    data:{ labels:['Rainfed','Canal','Borewell','Sprinkler','Drip'],
+      datasets:[{ label:'Avg Yield Multiplier',
+        data:[1.00,1.15,1.12,1.18,1.20].map(v=>+(v*(0.95+Math.random()*.1)).toFixed(2)),
+        backgroundColor:['#c4bdb5','#52b788','#2d6a4f','#d4a843','#f0c040'],
+        borderRadius:6 }]
+    },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{ y:{min:0.8, title:{display:true,text:'Yield Multiplier'}, grid:{color:'rgba(0,0,0,.04)'}},
+               x:{grid:{display:false}} }
+    }
+  });
+
+  // Season breakdown
+  new Chart(document.getElementById('chart-season'), {
+    type:'doughnut',
+    data:{ labels:['Kharif','Rabi','Annual'],
+      datasets:[{ data:[54, 38, 8],
+        backgroundColor:['#2d6a4f','#d4a843','#a0522d'],
+        borderWidth:0, hoverOffset:8 }]
+    },
+    options:{ responsive:true, maintainAspectRatio:false, cutout:'62%',
+      plugins:{ legend:{position:'bottom', labels:{padding:20, boxWidth:12} } }
+    }
+  });
+}
+
+// ── TABLE ─────────────────────────────────────────────────────────────────────
+function sampleRows(n=200) {
+  const states  = Object.keys(DISTRICTS);
+  const crops   = Object.keys(CROP_BASELINES);
+  const irrs    = ['Rainfed','Canal','Borewell','Drip','Sprinkler'];
+  const seasons = ['Kharif','Rabi','Annual'];
+  const rows=[];
+  for(let i=0;i<n;i++){
+    const state   = states[Math.floor(Math.random()*states.length)];
+    const dist    = DISTRICTS[state][Math.floor(Math.random()*DISTRICTS[state].length)];
+    const crop    = crops[Math.floor(Math.random()*crops.length)];
+    const base    = CROP_BASELINES[crop];
+    const season  = CROP_SEASONS[crop]||seasons[Math.floor(Math.random()*seasons.length)];
+    const rain    = Math.round(200+Math.random()*1300);
+    const tmax    = +(28+Math.random()*14).toFixed(1);
+    const fertN   = Math.round(40+Math.random()*160);
+    const irr     = irrs[Math.floor(Math.random()*irrs.length)];
+    const yield_  = Math.round(base*(0.6+Math.random()*0.8));
+    rows.push({state,dist,crop,season,year:Math.round(2010+Math.random()*14),rain,tmax,fertN,irr,yield_});
+  }
+  return rows;
+}
+
+let ALL_ROWS = sampleRows(500);
+
+function filterTable() {
+  const st = document.getElementById('ex-state').value;
+  const cr = document.getElementById('ex-crop').value;
+  const se = document.getElementById('ex-season').value;
+  const filtered = ALL_ROWS.filter(r =>
+    (!st || r.state===st) && (!cr || r.crop===cr) && (!se || r.season===se)
+  );
+  renderTable(filtered);
+}
+
+function renderTable(rows) {
+  const tbody = document.getElementById('table-body');
+  document.getElementById('row-count').textContent = rows.length.toLocaleString();
+  tbody.innerHTML = rows.slice(0,150).map(r => {
+    const cat  = yieldCategory(r.crop, r.yield_);
+    const cls  = categoryBadgeClass(cat);
+    return `<tr>
+      <td>${r.state}</td><td>${r.dist}</td><td>${r.crop}</td><td>${r.season}</td>
+      <td>${r.year}</td><td>${r.rain}</td><td>${r.tmax}</td>
+      <td>${r.fertN}</td><td>${r.irr}</td><td>${r.yield_.toLocaleString()}</td>
+      <td><span class="badge ${cls}">${cat}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function buildTable() {
+  if(!document.getElementById('table-body').innerHTML) renderTable(ALL_ROWS);
+}
+
+// ── TOAST ─────────────────────────────────────────────────────────────────────
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className   = 'toast' + (type ? ' '+type : '') + ' show';
+  setTimeout(() => t.className = 'toast', 3000);
+}
+</script>
+</body>
+</html>

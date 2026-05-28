@@ -1,0 +1,117 @@
+name: CI/CD — Crop Yield Prediction
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+
+  # ── 1. Test ────────────────────────────────────────────────────────────────
+  test:
+    name: Run Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt pytest
+
+      - name: Generate dataset
+        run: python scripts/generate_dataset.py
+
+      - name: Run preprocessing
+        run: python src/ml/preprocess.py
+
+      - name: Train model (fast mode)
+        run: |
+          python -c "
+          import numpy as np, tensorflow as tf, joblib, json, sys
+          sys.path.insert(0,'src/ml')
+          from model import build_residual_ann
+          X_train = np.load('data/processed/X_train.npy')
+          y_train = np.load('data/processed/y_train.npy')
+          X_val   = np.load('data/processed/X_val.npy')
+          y_val   = np.load('data/processed/y_val.npy')
+          m = build_residual_ann()
+          m.fit(X_train, y_train, validation_data=(X_val,y_val),
+                epochs=5, batch_size=256, verbose=0)
+          m.save('models/best_model.keras')
+          print('Fast train done')
+          "
+
+      - name: Run pytest
+        run: python -m pytest tests/ -v --tb=short
+
+  # ── 2. Lint ────────────────────────────────────────────────────────────────
+  lint:
+    name: Lint Python
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install flake8
+      - run: |
+          flake8 src/ scripts/ tests/ \
+            --max-line-length=110 \
+            --ignore=E501,W503,E203 \
+            --exclude=__pycache__
+
+  # ── 3. Docker Build ────────────────────────────────────────────────────────
+  docker:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: [test]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: deployment/docker/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/crop-yield-api:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/crop-yield-api:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ── 4. Deploy (optional) ───────────────────────────────────────────────────
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [docker]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host:     ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key:      ${{ secrets.PROD_SSH_KEY }}
+          script: |
+            cd /opt/crop-yield-app
+            docker compose pull
+            docker compose up -d --no-build
+            docker system prune -f
+            echo "✅ Deployed at $(date)"
